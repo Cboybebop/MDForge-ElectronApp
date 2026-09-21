@@ -1,0 +1,121 @@
+/* Design tokens — theme mechanism (EDIT-02).
+ *
+ * Resolution order (per 01-UI-SPEC.md "New Surface 1 — Theme Token Contract
+ * & Mechanism"), four blocks, later blocks win when their selector matches:
+ *
+ *   1. Bare `:root { ... }`                — DARK values, the default. The
+ *      shipped browser app is dark-only today, so dark is the fallback when
+ *      no `data-theme` attribute is present and the OS has no light
+ *      preference (or system mode has not been explicitly resolved yet).
+ *   2. `[data-theme="dark"] { ... }`        — the SAME dark values, in
+ *      explicit attribute form. Used when the user has explicitly chosen
+ *      "Dark" from the theme <select> (as opposed to "System" landing on
+ *      dark via the OS).
+ *   3. `[data-theme="light"] { ... }`       — the newly authored LIGHT
+ *      values. Used when the user has explicitly chosen "Light".
+ *   4. `@media (prefers-color-scheme: light) { :root:not([data-theme]) {} }`
+ *      — the "System" mode fallback. Per the locked mechanism, System mode
+ *      sets NO `data-theme` attribute at all. When no attribute is present
+ *      and the OS prefers light, this block overrides the bare `:root`
+ *      dark default with the light values. When no attribute is present and
+ *      the OS prefers dark (or has no preference), block (1)'s dark default
+ *      already applies with no override needed — so there is deliberately
+ *      no `@media (prefers-color-scheme: dark)` block here.
+ *
+ * See 01-UI-SPEC.md "Color" table for the source values and role mapping.
+ */
+
+:root {
+  --bg:                  #0f1117;
+  --surface:             #171b26;
+  --border:              #2a2f3e;
+  --accent:              #e8a44a;
+  --accent-dim:          #a3712e;
+  --accent-hover:        #f0b96a;
+  --on-accent:           #0f1117;
+  --text:                #d4cfc8;
+  --text-dim:            #6b7280;
+  --text-bright:         #f0ece4;
+  --text-em:             #c8c0b4;
+  --text-quote:          #a09890;
+  --green:               #5fb88a;
+  --red:                 #e05c5c;
+  --accent-soft:         rgba(232, 164, 74, 0.10);
+  --accent-soft-strong:  rgba(232, 164, 74, 0.14);
+  --accent-soft-faint:   rgba(232, 164, 74, 0.05);
+  --accent-soft-border:  rgba(232, 164, 74, 0.20);
+  --row-stripe:          rgba(255, 255, 255, 0.02);
+
+  --mono:  'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --serif: 'Georgia', 'Palatino', serif;
+  --sans:  'Trebuchet MS', 'Segoe UI', sans-serif;
+  --radius: 4px;
+}
+
+[data-theme="dark"] {
+  --bg:                  #0f1117;
+  --surface:             #171b26;
+  --border:              #2a2f3e;
+  --accent:              #e8a44a;
+  --accent-dim:          #a3712e;
+  --accent-hover:        #f0b96a;
+  --on-accent:           #0f1117;
+  --text:                #d4cfc8;
+  --text-dim:            #6b7280;
+  --text-bright:         #f0ece4;
+  --text-em:             #c8c0b4;
+  --text-quote:          #a09890;
+  --green:               #5fb88a;
+  --red:                 #e05c5c;
+  --accent-soft:         rgba(232, 164, 74, 0.10);
+  --accent-soft-strong:  rgba(232, 164, 74, 0.14);
+  --accent-soft-faint:   rgba(232, 164, 74, 0.05);
+  --accent-soft-border:  rgba(232, 164, 74, 0.20);
+  --row-stripe:          rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="light"] {
+  --bg:                  #faf8f5;
+  --surface:             #ffffff;
+  --border:              #ddd6cc;
+  --accent:              #96600c;
+  --accent-dim:          #7a4d0a;
+  --accent-hover:        #7a4d0a;
+  --on-accent:           #fff8f0;
+  --text:                #4a4438;
+  --text-dim:            #6b6459;
+  --text-bright:         #1f1b15;
+  --text-em:             #55503f;
+  --text-quote:          #6b6456;
+  --green:               #2f8f5b;
+  --red:                 #c23b3b;
+  --accent-soft:         rgba(150, 96, 12, 0.08);
+  --accent-soft-strong:  rgba(150, 96, 12, 0.14);
+  --accent-soft-faint:   rgba(150, 96, 12, 0.05);
+  --accent-soft-border:  rgba(150, 96, 12, 0.25);
+  --row-stripe:          rgba(0, 0, 0, 0.03);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --bg:                  #faf8f5;
+    --surface:             #ffffff;
+    --border:              #ddd6cc;
+    --accent:              #96600c;
+    --accent-dim:          #7a4d0a;
+    --accent-hover:        #7a4d0a;
+    --on-accent:           #fff8f0;
+    --text:                #4a4438;
+    --text-dim:            #6b6459;
+    --text-bright:         #1f1b15;
+    --text-em:             #55503f;
+    --text-quote:          #6b6456;
+    --green:               #2f8f5b;
+    --red:                 #c23b3b;
+    --accent-soft:         rgba(150, 96, 12, 0.08);
+    --accent-soft-strong:  rgba(150, 96, 12, 0.14);
+    --accent-soft-faint:   rgba(150, 96, 12, 0.05);
+    --accent-soft-border:  rgba(150, 96, 12, 0.25);
+    --row-stripe:          rgba(0, 0, 0, 0.03);
+  }
+}

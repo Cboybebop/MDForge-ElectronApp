@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MD Forge — Spellcheck Spike</title>
+
+  <!-- 09-REVIEW.md WR-04 fix: styling lives in an external stylesheet, not
+       inline `style="..."` attributes -- this app's production CSP
+       (src/main/security.js PROD_CSP: `style-src 'self'`, no
+       'unsafe-inline') is applied unconditionally to every app:// response
+       including this page, and silently rejects inline styles. A linked
+       .css file from the same origin IS permitted under `style-src 'self'`
+       -- only inline style is restricted -- so this is how the box model
+       described below actually applies. See styles/spike.css's own header
+       comment for the full account. -->
+  <link rel="stylesheet" href="./styles/spike.css" />
+</head>
+<body>
+<!-- Permanent measurement harness for Phase 9's decision gate (09-CONTEXT.md
+     Area 1/2). No toolbar, no tab bar, none of index.html's markup -- a bare
+     CM6 EditorView is the entire surface, per CONTEXT.md's "bare EditorView
+     with minimal extensions" instruction. height:100vh (styles/spike.css)
+     so EditorView.coordsAtPos later returns real, non-zero screen
+     coordinates (09-01-PLAN.md Task 3). -->
+<div id="spike-mount"></div>
+
+<!-- Orchestrator-directed addition (2026-09-14): the three-surface CONTROL
+     comparison named in Phase 9's decision-gate record. These two elements
+     are the positive controls the sole CM6 signal above is measured against
+     -- same build, same forced en-US session language, same
+     dblclick-then-right-click mechanism, driven by
+     tests/e2e/spellcheck-spike.spec.js's new control-measurement test. Kept
+     permanent alongside the CM6 mount above (same lifecycle: excluded from
+     the packaged installer per 09-03-PLAN.md Task 2, present in every
+     `npm run build` output for the spec to launch against). -->
+
+<!-- Surface A: the textarea attributes this app actually ships today
+     (src/renderer/index.html:205, `<textarea id="md-input"
+     spellcheck="true" ...>`) -- the positive control proving the
+     measurement rig itself works. No `lang` attribute, matching production
+     (production sets no explicit lang on #md-input either). Box model in
+     styles/spike.css. -->
+<textarea id="spike-control-textarea" spellcheck="true"></textarea>
+
+<!-- Surface B: a bare contenteditable div, no CodeMirror involved -- isolates
+     "CM6 is the problem" from "contenteditable is the problem in Electron
+     43/Chromium 150" (the upstream discuss.codemirror.net report's own
+     claim, restated in this task's objective). Box model in
+     styles/spike.css, matched to Surface A's so the comparison is real. -->
+<div id="spike-control-contenteditable" contenteditable="true" spellcheck="true" lang="en-US"></div>
+
+<script type="module" src="./spike/spellcheck-spike.js"></script>
+</body>
+</html>

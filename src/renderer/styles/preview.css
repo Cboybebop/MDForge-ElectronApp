@@ -1,0 +1,181 @@
+/* Rendered-preview pane + empty-state overlay — ported from index.html:306-435.
+ *
+ * Token migration (01-UI-SPEC.md "Token migration note"): `#preview em`'s
+ * `#c8c0b4` literal becomes `var(--text-em)`; the `rgba(232,164,74,...)`
+ * tints in `#preview code`/`pre`/`blockquote` become `var(--accent-soft)` /
+ * `var(--accent-soft-border)` / `var(--accent-soft-faint)`; `#preview
+ * a:hover`'s `#f0b96a` becomes `var(--accent-hover)`; `#preview
+ * tr:nth-child(even) td`'s `rgba(255,255,255,0.02)` becomes
+ * `var(--row-stripe)`. (The fourth `rgba(232,164,74,...)` tint —
+ * `.format-btn.active`'s background — lives in panes.css and is migrated
+ * there.) These changes are zero-pixel-diff in dark mode.
+ *
+ * New Surface 3 (Empty-State Relocation): `.preview-wrap` is a NEW
+ * non-editable positioning container, not extracted from index.html.
+ * `#preview` is now a flex child of `.preview-wrap`, and `#empty-state`
+ * (moved to be a DOM sibling of `#preview`, not a child) resolves its
+ * existing `position:absolute; inset:0;` against `.preview-wrap` as its
+ * positioned ancestor instead of `#preview`.
+ */
+
+.preview-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+.preview-wrap #preview { flex: 1; }
+
+/* ─── Right pane: rendered preview ───────────────────────────── */
+#preview {
+  padding: 24px 28px;
+  background: var(--surface);
+  color: var(--text-bright);
+  font-family: var(--serif);
+  font-size: 15px;
+  line-height: 1.8;
+  overflow-y: auto;
+  outline: none;
+  /* contenteditable caret */
+  caret-color: var(--accent);
+}
+#preview::-webkit-scrollbar { width: 6px; }
+#preview::-webkit-scrollbar-track { background: transparent; }
+#preview::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ─── Rendered markdown styles ────────────────────────────────── */
+#preview h1, #preview h2, #preview h3,
+#preview h4, #preview h5, #preview h6 {
+  font-family: var(--sans);
+  color: var(--text-bright);
+  margin-top: 1.5em;
+  margin-bottom: 0.4em;
+  line-height: 1.3;
+}
+#preview h1 { font-size: 2em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+#preview h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+#preview h3 { font-size: 1.2em; color: var(--accent); }
+#preview h4, #preview h5, #preview h6 { font-size: 1em; color: var(--text-dim); }
+
+#preview p { margin-bottom: 1em; }
+
+#preview a { color: var(--accent); text-decoration: underline; }
+#preview a:hover { color: var(--accent-hover); }
+
+#preview strong { color: var(--text-bright); font-weight: 700; }
+#preview em { font-style: italic; color: var(--text-em); }
+
+#preview code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-soft-border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: var(--accent);
+}
+
+#preview pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  overflow-x: auto;
+  margin: 1.2em 0;
+}
+#preview pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  color: var(--text-bright);
+}
+
+#preview blockquote {
+  margin: 1em 0;
+  padding: 10px 18px;
+  border-left: 3px solid var(--accent-dim);
+  background: var(--accent-soft-faint);
+  color: var(--text-quote);
+  font-style: italic;
+}
+
+#preview ul, #preview ol {
+  margin: 0.5em 0 1em 1.5em;
+}
+#preview li { margin-bottom: 0.25em; }
+
+#preview table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+  font-family: var(--sans);
+  font-size: 13.5px;
+}
+#preview th {
+  background: var(--bg);
+  color: var(--accent);
+  font-weight: 600;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+#preview td {
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+}
+#preview tr:nth-child(even) td { background: var(--row-stripe); }
+
+#preview hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2em 0;
+}
+
+#preview img { max-width: 100%; border-radius: var(--radius); }
+
+/* ─── Empty state ─────────────────────────────────────────────── */
+#empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  pointer-events: none;
+  opacity: 0.45;
+}
+/* Rule 1 auto-fix: `.hidden` alone (specificity 0,1,0) cannot override
+ * `#empty-state`'s `display: flex` (specificity 1,0,0) regardless of source
+ * order — an ID selector always beats a class selector. render.js (01-03)
+ * toggles visibility via `#empty-state.classList.toggle('hidden', ...)`, so
+ * a compound `#empty-state.hidden` selector (specificity 1,1,0) is required
+ * to actually win over the bare `#empty-state` rule above. */
+#empty-state.hidden { display: none; }
+#empty-state svg { width: 48px; height: 48px; color: var(--text-dim); }
+#empty-state p  {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* [Rule 1 - Bug] 03-05-PLAN.md's paste handler (preview/events.js,
+ * computeResultViaScratch) needs a detached, off-screen, briefly-focused
+ * contenteditable clone to run the REAL execCommand mechanism against
+ * (see that function's own header comment). Positioning it via
+ * `element.style.position = ...` was verified BLOCKED by this app's own
+ * `style-src 'self'` CSP (csp.spec.js's locked policy has no
+ * 'unsafe-inline') -- Chromium enforces CSP against JS-driven `.style`
+ * property writes exactly as it does against an HTML `style=""` attribute,
+ * not just `<style>` blocks. A class rule is the only CSP-compliant way to
+ * position it off-screen. */
+.paste-scratch {
+  position: fixed;
+  left: -99999px;
+  top: 0;
+}

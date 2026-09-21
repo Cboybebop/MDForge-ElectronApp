@@ -1,0 +1,105 @@
+# Production packaging config -- Phase 8. Replaces the Phase 1 D3 file-
+# association proof-of-concept config wholesale (the prior file's every
+# value -- appId, productName, output dir, oneClick -- has been superseded).
+# See 08-RESEARCH.md Code Example 1 and 08-CONTEXT.md's locked Installer &
+# Packaging decisions.
+appId: com.markey.mdforge   # MUST be byte-identical to app.setAppUserModelId('com.markey.mdforge')
+                            # in src/main/index.js -- a mismatch silently breaks the Windows jump
+                            # list and recent-documents list (PERS-07 / Phase 6).
+productName: MD Forge
+directories:
+  output: dist
+files:
+  - out/**/*
+  # The spike-spellcheck harness (built by 09-01-PLAN.md, kept PERMANENTLY per
+  # 09-03-PLAN.md's revision note) is test-only infrastructure: a permanent
+  # regression guard (tests/e2e/spellcheck-spike.spec.js) exercises a real CM6
+  # EditorView against it on every commit, so it is never deleted from the
+  # repository or from `npm run build`'s own out/renderer/ output. These
+  # negation globs exclude it ONLY from what electron-builder packages into
+  # dist/ for real end users -- electron-vite's build output (and therefore
+  # the test suite) is completely unaffected by this list.
+  - '!out/renderer/spike-spellcheck.html'
+  - '!out/renderer/spike/**'
+  # [09-03, Rule 1 auto-fix] The two globs above are 09-03-PLAN.md's literal
+  # spec, but a real `npm run build` confirms electron-vite's multi-page
+  # output for the "spike" rollup entry (electron.vite.config.js) is NOT a
+  # out/renderer/spike/ subdirectory -- it is one or more content-hashed
+  # chunks, out/renderer/assets/spike-<hash>.<ext>, alongside the shared
+  # out/renderer/assets/ directory the production index.html entry also
+  # uses. The `!out/renderer/spike/**` glob above therefore matches nothing
+  # real (a harmless no-op, kept for literal plan compliance) and, without
+  # this third line, the spike's own chunk(s) would still ship inside dist/
+  # -- inert without their HTML entry point, but still real spike code
+  # reaching end users, contradicting this task's own stated goal. This
+  # glob is the one that actually does the exclusion.
+  #
+  # [09-REVIEW.md WR-04 fix, 2026-09-15] Originally `!out/renderer/assets/spike-*.js`
+  # (JS-only). Moving the spike page's styling out of inline `style="..."`
+  # attributes (rejected by this app's own CSP) into a real stylesheet
+  # (src/renderer/styles/spike.css) made electron-vite emit a SECOND
+  # content-hashed spike chunk, out/renderer/assets/spike-<hash>.css --
+  # which the JS-only glob did not cover, and which tests/packaging-config.test.js's
+  # real-build cross-check (09-REVIEW.md WR-03) caught failing before this
+  # broadening. Dropping the extension restriction covers any asset type a
+  # future spike-page change might add (js, css, or otherwise) under the
+  # same content-hashed `spike-<hash>` naming electron-vite already uses,
+  # without needing another one-off fix each time.
+  - '!out/renderer/assets/spike-*'
+win:
+  target: nsis
+  # verifyUpdateCodeSignature belongs to WindowsConfiguration, not NsisOptions -- confirmed
+  # against the installed app-builder-lib@26.15.3 schema (node_modules/app-builder-lib/scheme.json);
+  # placing it under `nsis:` fails config validation ("configuration.nsis should be one of
+  # these: null"). Deliberately false for an unsigned build -- see 08-RESEARCH.md Common
+  # Pitfall 3 for what this does NOT do: it is never serialized into the packaged
+  # app-update.yml. The actual, checkable proxy for "unsigned update verification fails open"
+  # is scripts/check-app-update-config.mjs asserting publisherName's absence from that file.
+  verifyUpdateCodeSignature: false
+  # win.icon (10-02-PLAN.md Task 1): the app window/taskbar/Start-menu/installed-exe icon.
+  # Validated by electron-builder itself (convertIcon() -> ERR_ICON_TOO_SMALL if the max
+  # declared size is under 256) -- build/icon.ico's 7 sizes (10-01-PLAN.md) already satisfy
+  # this. Embedded into the built .exe's PE resource section via resedit at build time
+  # (10-RESEARCH.md Pattern 1).
+  icon: build/icon.ico
+nsis:
+  oneClick: false                             # criterion 1: assisted installer, real choice for the user
+  perMachine: false                           # per-user install -- no UAC on install or on any auto-update
+  allowToChangeInstallationDirectory: false   # electron-builder default; stated for clarity
+  deleteAppDataOnUninstall: false             # criterion 1: never delete user data on uninstall
+  # installerIcon/uninstallerIcon (10-02-PLAN.md Task 1): both already default to the app
+  # icon if unset, but 10-CONTEXT.md Area 2 asks for them to be wired explicitly. Deliberately
+  # does NOT include installerHeaderIcon -- per scheme.json's own description that key is
+  # one-click-installer-only, and this project's oneClick is false above, so it would be
+  # silently ignored (10-RESEARCH.md Pitfall 1).
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+fileAssociations:
+  - ext: md
+    # STABLE STRING -- do not rename post-release. In electron-builder@26.15.3 this literal
+    # value IS the .md ProgID (FILECLASS), written unconditionally on every install/upgrade
+    # and read unconditionally on every uninstall (including the silent old-version uninstall
+    # electron-builder runs as the first step of every upgrade). Changing it silently breaks
+    # the file association for every existing user on their next upgrade, with no build-time
+    # error to catch the mistake -- see 08-RESEARCH.md Common Pitfall 1 and
+    # tests/packaging-config.test.js's golden-value assertion, which is the standing guard.
+    name: Markdown Document
+    description: Markdown Document
+    # icon (10-02-PLAN.md Task 1): the .md document icon shown in Explorer. Unlike win.icon,
+    # this key is NOT validated by electron-builder (plain getResource() path lookup, copied
+    # verbatim into $INSTDIR\resources\ -- 10-RESEARCH.md Pattern 1/2). Adding this key is
+    # safe alongside name: -- APP_ASSOCIATE's ICON and FILECLASS parameters are entirely
+    # separate NSIS macro arguments, so this cannot alter the ProgID above.
+    icon: build/mdDocument.ico
+publish:
+  provider: github
+  # Two-repo split (post-v1.1): `Cboybebop/MD-Forge-App` (private) holds ALL work --
+  # commits, tests, planning, docs, experimentation. `Cboybebop/MDForge-ElectronApp`
+  # (public) receives release candidates ONLY, via scripts/release-export.mjs's
+  # allow-listed export. This owner/repo pair MUST point at the PUBLIC release repo,
+  # not `origin` -- it is what electron-builder serializes into every packaged
+  # app-update.yml, so it governs where every installed copy checks for updates.
+  # Keep in sync with src/main/menu.js's "View Releases on GitHub" item and
+  # .github/workflows/release.yml's header comment -- all three must agree.
+  owner: Cboybebop
+  repo: MDForge-ElectronApp

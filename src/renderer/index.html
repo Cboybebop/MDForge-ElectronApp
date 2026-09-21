@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MD Forge</title>
+
+  <link rel="stylesheet" href="./styles/tokens.css" />
+  <link rel="stylesheet" href="./styles/base.css" />
+  <link rel="stylesheet" href="./styles/toolbar.css" />
+  <link rel="stylesheet" href="./styles/tabs.css" />
+  <link rel="stylesheet" href="./styles/panes.css" />
+  <link rel="stylesheet" href="./styles/sidebar.css" />
+  <link rel="stylesheet" href="./styles/preview.css" />
+</head>
+<body>
+
+<!-- ─── Toolbar ──────────────────────────────────────────────────── -->
+<div id="toolbar">
+  <span class="logo">MD<span>//</span>FORGE</span>
+
+  <!-- Sidebar toggle (Surface 1, 07-UI-SPEC.md "Toolbar and Menu additions").
+       Icon-only; reuses the same folder <svg> path as the tree's own
+       directory icon -- no third icon is authored for this button. -->
+  <button class="btn" id="btn-toggle-sidebar" aria-label="Hide folder sidebar"
+          aria-pressed="true" data-tooltip="Hide sidebar (Ctrl+B)">
+    <!-- Two icons, one shown at a time via #btn-toggle-sidebar[aria-pressed].
+         The button previously kept a single static folder glyph, so toggling
+         gave no feedback at all -- and with "No folder open" showing either
+         way, hiding an empty panel read as the button doing nothing. The
+         filled bar marks which side the panel occupies, so the icon says
+         what the click will do rather than merely what the button is. -->
+    <svg class="icon-sidebar-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="4" width="18" height="16" rx="2"/>
+      <line x1="9" y1="4" x2="9" y2="20"/>
+      <rect x="3.75" y="4.75" width="4.5" height="14.5" rx="1.25" fill="currentColor" stroke="none" opacity="0.35"/>
+    </svg>
+    <svg class="icon-sidebar-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="4" width="18" height="16" rx="2"/>
+      <line x1="9" y1="4" x2="9" y2="20"/>
+    </svg>
+  </button>
+
+  <!-- Open file -->
+  <button class="btn" id="btn-open">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+    </svg>
+    Open
+  </button>
+
+  <!-- New file -->
+  <button class="btn" id="btn-new">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="12" y1="11" x2="12" y2="17"/>
+      <line x1="9"  y1="14" x2="15" y2="14"/>
+    </svg>
+    New
+  </button>
+
+  <!-- Save (disabled until a file handle exists) -->
+  <button class="btn primary" id="btn-save" disabled>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+      <polyline points="17 21 17 13 7 13 7 21"/>
+      <polyline points="7 3 7 8 15 8"/>
+    </svg>
+    Save
+  </button>
+
+  <!-- Save As -->
+  <button class="btn" id="btn-save-as">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="15 3 21 3 21 9"/>
+      <path d="M10 14L21 3"/>
+      <path d="M21 16v5H3V5h5"/>
+    </svg>
+    Save As
+  </button>
+
+  <div class="spacer"></div>
+
+  <div class="pane-mode-controls" aria-label="Pane layout controls">
+    <label for="pane-mode-select">Pane mode</label>
+    <select id="pane-mode-select" title="Choose whether to show one pane or both panes">
+      <option value="both">Both panes</option>
+      <option value="left">Source only</option>
+      <option value="right">Preview only</option>
+    </select>
+    <label for="split-width">Split</label>
+    <input type="range" id="split-width" min="20" max="80" step="1" value="50" title="Adjust left/right pane width" />
+  </div>
+
+  <div class="pane-mode-controls" aria-label="Theme controls">
+    <label for="theme-select">Theme</label>
+    <select id="theme-select" title="Choose light, dark, or system-following theme" aria-label="Theme">
+      <option value="system">System</option>
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+    </select>
+  </div>
+
+  <label class="toolbar-toggle" for="toggle-sync-scroll" title="Syncs scroll position between panes">
+    <input type="checkbox" id="toggle-sync-scroll" checked />
+    Sync scroll
+  </label>
+
+  <!-- Word/character count readout (EDIT-04, 05-UI-SPEC.md Surface 3).
+       Placed immediately before #status-badge so the transient badge stays
+       right-most, as it is today. Never hidden or emptied -- status.js's
+       updateDocCount() writes into this element's textContent directly. -->
+  <span id="doc-count" title="Word and character count of the rendered document">0 words · 0 chars</span>
+
+  <!-- Status badge (fades in/out) -->
+  <span id="status-badge" class="hidden"></span>
+</div>
+
+<!-- ─── Tab bar (Surface 1, 05-UI-SPEC.md) ────────────────────────── -->
+<!-- Always rendered, including with exactly one document open. Individual
+     .tab elements are rendered by tabs/tab-bar.js from documents.js's Map --
+     this shell is the only static markup. -->
+<div id="tab-bar" role="tablist" aria-label="Open documents"></div>
+
+<!-- ─── Workspace (07-UI-SPEC.md "Structural placement", binding) ─────────
+     NEW wrapper inserted between #tab-bar and #editor-area. #editor-area's
+     own internals (below) are UNCHANGED from Phase 6 -- #workspace takes
+     over the flex:1 row role #editor-area used to hold directly against
+     body, and #editor-area becomes flex:1 *inside* #workspace instead.
+     panes/resize.js's getBoundingClientRect() call on #editor-area is
+     unaffected: that rect is still #editor-area's own box, now measured one
+     level deeper, which changes nothing about the drag-percentage math. -->
+<div id="workspace">
+
+  <!-- Sidebar tree (Surface 1, WORK-01/WORK-02). Individual .tree-item rows
+       are rendered by a later plan's workspace/tree.js module -- this shell
+       is the only static markup. -->
+  <div id="sidebar" role="tree" aria-label="Workspace folder" tabindex="-1">
+    <!-- No folder open (initial / empty state) -->
+    <div id="sidebar-empty" class="sidebar-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      </svg>
+      <p>No folder open.<br>Open a folder to browse its Markdown files.</p>
+      <button class="btn" id="btn-sidebar-open-folder" type="button">Open Folder</button>
+    </div>
+
+    <!-- Tree root (hidden while sidebar-empty is shown) -->
+    <div id="tree-root" class="hidden">
+      <!-- one .tree-item per row, rendered from a workspace/tree.js module -->
+    </div>
+  </div>
+
+  <!-- Sidebar resize handle -- same idiom as #drag-handle (single-owner
+       setter, mousedown/mousemove/mouseup, clamped range), driven by its
+       own resize module since it targets a different element and a
+       different persisted value. -->
+  <div id="sidebar-resize-handle"></div>
+
+<!-- ─── Editor area ───────────────────────────────────────────────── -->
+<div id="editor-area" role="tabpanel">
+
+  <!-- Crash-recovery / session-restore banner (PERS-02, 06-CONTEXT.md
+       "Crash Detection & Recovery UX" -- locked): one dismissible inline
+       banner, manual dismiss only, never auto-hides. Populated/shown by
+       session/restore.js via recovery-banner.js's showRecoveryBanner(); a
+       plain static `.hidden` shell here, matching #empty-state's own
+       toggle-a-class-not-remove-a-node idiom. -->
+  <div id="recovery-banner" class="hidden" role="status">
+    <span id="recovery-banner-text"></span>
+    <button id="recovery-banner-dismiss" type="button">Dismiss</button>
+  </div>
+
+  <!-- External-change banner (Surface 3, WORK-05). Reuses #recovery-banner's
+       exact visual shape as a second, independent full-width row -- a
+       distinct element with its own controller module, not a call into
+       recovery-banner.js. Either, both, or neither banner may be visible
+       at once. -->
+  <div id="external-change-banner" class="hidden" role="alert">
+    <span id="external-change-banner-text"></span>
+    <div class="banner-actions">
+      <button class="banner-btn" id="external-change-keep-mine" type="button">Keep Mine</button>
+      <button class="banner-btn banner-btn--primary" id="external-change-reload-theirs" type="button">Reload Theirs</button>
+      <button class="banner-btn" id="external-change-save-copy" type="button">Save As Copy</button>
+    </div>
+  </div>
+
+  <!-- [06-07] The two panes + drag handle are wrapped in their own flex-row
+       container so the banner above can occupy a full-width row of its own
+       -- #editor-area itself switched to a column flex container (see
+       panes.css) precisely so inserting the banner as a sibling of this
+       wrapper doesn't get laid out AS a third column alongside the panes.
+       panes/resize.js's drag calculation reads #editor-area's own
+       getBoundingClientRect(), which is unaffected by this nesting change
+       (that rect is #editor-area's own box, not derived from its children's
+       layout direction). -->
+  <div id="editor-panes">
+
+  <!-- Left pane: raw markdown -->
+  <div class="pane pane--split-default" id="left-pane">
+    <div class="pane-header">
+      <span class="pane-label">Markdown Source</span>
+    </div>
+    <!-- [12-02] CM6 mount host -- the single shared EditorView is mounted
+         here once, at documents.js module load. Kept the id `md-input`
+         unchanged to minimise blast radius on not-yet-migrated selectors,
+         e2e specs, and CSS rules this phase does not own (T-12-05). CM6
+         owns spellcheck/placeholder via its own extensions now, not DOM
+         attributes on this host. -->
+    <div id="md-input"></div>
+
+    <!-- ─── Find & replace bar (Surface 2, 05-UI-SPEC.md) ─────────────── -->
+    <!-- Per-window, not per-document -- a single shared bar, never
+         duplicated per open tab. Two classes drive visibility: `.hidden`
+         hides the whole bar; `.find-only` hides just the replace row. -->
+    <div id="find-bar" class="hidden find-only" role="search" aria-label="Find and replace">
+      <div class="find-row">
+        <input type="text" id="find-input" class="find-input" placeholder="Find"
+               aria-label="Find" autocomplete="off" spellcheck="false" />
+        <span id="find-count" aria-live="polite"></span>
+        <button class="find-btn" id="find-prev" type="button"
+                data-tooltip="Previous match (Shift+Enter)" aria-label="Previous match">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <polyline points="18 15 12 9 6 15"/>
+          </svg>
+        </button>
+        <button class="find-btn" id="find-next" type="button"
+                data-tooltip="Next match (Enter)" aria-label="Next match">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <label class="toolbar-toggle" for="find-match-case" title="Match case">
+          <input type="checkbox" id="find-match-case" /> Aa
+        </label>
+        <label class="toolbar-toggle" for="find-regex" title="Regular expression">
+          <input type="checkbox" id="find-regex" /> .*
+        </label>
+        <label class="toolbar-toggle" for="find-whole-word" title="Whole word">
+          <input type="checkbox" id="find-whole-word" /> Word
+        </label>
+        <button class="find-btn" id="find-close" type="button"
+                data-tooltip="Close find bar" aria-label="Close find bar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="find-row find-row--replace">
+        <input type="text" id="replace-input" class="find-input" placeholder="Replace with"
+               aria-label="Replace with" autocomplete="off" spellcheck="false" />
+        <button class="btn" id="replace-one" type="button">Replace</button>
+        <button class="btn" id="replace-all" type="button">Replace All</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Draggable divider -->
+  <div id="drag-handle"></div>
+
+  <!-- Right pane: rendered preview -->
+  <div class="pane pane--fill" id="right-pane">
+    <div class="pane-header">
+      <span class="pane-label">Preview (Editable)</span>
+      <div class="pane-actions wysiwyg-toolbar" aria-label="Preview formatting controls">
+        <select class="format-select" id="format-block" data-tooltip="Text style" aria-label="Text style">
+          <option value="P">Paragraph</option>
+          <option value="H1">Heading 1</option>
+          <option value="H2">Heading 2</option>
+          <option value="H3">Heading 3</option>
+          <option value="H4">Heading 4</option>
+          <option value="BLOCKQUOTE">Quote</option>
+          <option value="PRE">Code block</option>
+        </select>
+        <button class="format-btn" type="button" data-command="bold" data-tooltip="Bold" aria-label="Bold">B</button>
+        <button class="format-btn" type="button" data-command="italic" data-tooltip="Italic" aria-label="Italic"><em>I</em></button>
+        <button class="format-btn" type="button" data-command="underline" data-tooltip="Underline" aria-label="Underline"><u>U</u></button>
+        <button class="format-btn" type="button" data-command="strikeThrough" data-tooltip="Strikethrough" aria-label="Strikethrough"><s>S</s></button>
+        <button class="format-btn" type="button" data-command="insertUnorderedList" data-tooltip="Bullet list" aria-label="Bullet list">•</button>
+        <button class="format-btn" type="button" data-command="insertOrderedList" data-tooltip="Numbered list" aria-label="Numbered list">1.</button>
+        <button class="format-btn" type="button" id="btn-link" data-tooltip="Link" aria-label="Link">↗</button>
+        <div class="format-divider" aria-hidden="true"></div>
+        <button class="btn" id="btn-copy-confluence" data-tooltip="Copies rich HTML for pasting into Confluence">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          Copy for Confluence
+        </button>
+        <button class="btn" id="btn-copy-word" data-tooltip="Copies Word-friendly rich HTML with document styling">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 4h16v16H4z"/>
+            <path d="M7 8l2 8 3-8 3 8 2-8"/>
+          </svg>
+          Copy for Word
+        </button>
+      </div>
+    </div>
+    <!-- New Surface 3: #preview and #empty-state are now siblings inside a
+         positioning wrapper, not parent/child. #empty-state is no longer
+         part of the contenteditable/Turndown-visible surface. -->
+    <div class="preview-wrap">
+      <!-- contenteditable so the user can edit rendered HTML directly -->
+      <div id="preview" contenteditable="true" spellcheck="true"></div>
+      <div id="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+        <p>No content yet.<br>Start typing in the left pane<br>or open a file.</p>
+      </div>
+    </div>
+  </div>
+
+  </div>
+
+</div>
+
+</div> <!-- /#workspace -->
+
+<script type="module" src="./main.js"></script>
+</body>
+</html>

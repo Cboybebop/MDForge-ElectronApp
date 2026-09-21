@@ -1,0 +1,22 @@
+.DS_Store
+Thumbs.db
+*.log
+
+# GSD planning docs (local-only)
+.planning/
+
+# Node / build output
+node_modules/
+out/
+dist/
+.vite/
+
+# Test artifacts
+test-results/
+playwright-report/
+
+# Internal working docs -- kept locally, never published. The public docs are
+# docs/ARCHITECTURE.md and docs/HOW-TO-USE.md, which ARE tracked.
+CLAUDE.md
+docs/D3-VM-TEST-PROTOCOL.md
+docs/V1-VALIDATION-WORKBOOK.md

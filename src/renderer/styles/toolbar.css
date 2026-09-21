@@ -1,0 +1,169 @@
+/* Top toolbar, buttons, toggles, pane-mode controls, status badge, tooltips —
+ * ported from index.html:56-180, 448-473.
+ *
+ * Token migration (01-UI-SPEC.md "Token migration note"): `.btn.primary`'s
+ * hard-coded `#0f1117`/`#f0b96a` literals are replaced with `var(--on-accent)`
+ * / `var(--accent-hover)`. Zero rendered pixels change in dark mode (the hex
+ * values are identical to the dark token values) — this is what makes light
+ * mode resolve correctly.
+ */
+
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  position: relative;
+}
+
+#toolbar .logo {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 2px;
+  margin-right: 12px;
+  user-select: none;
+}
+
+#toolbar .logo span { color: var(--text-dim); }
+
+/* Buttons */
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
+.btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn.hidden { display: none; }
+
+.btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+#toolbar .spacer { flex: 1; }
+
+.toolbar-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.toolbar-toggle input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.pane-mode-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.pane-mode-controls select,
+.pane-mode-controls input[type="range"] {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: 11px;
+  height: 28px;
+}
+
+.pane-mode-controls select { padding: 0 8px; cursor: pointer; }
+.pane-mode-controls input[type="range"] {
+  width: 110px;
+  cursor: ew-resize;
+  padding: 0 4px;
+}
+.pane-mode-controls input[type="range"]:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Word/character count readout (EDIT-04, 05-UI-SPEC.md Surface 3) --
+   purely additive; no existing rule below is touched. */
+#doc-count {
+  flex: 0 0 auto;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+/* Status badge */
+#status-badge {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: all 0.3s;
+}
+#status-badge.saved   { color: var(--green); border-color: var(--green); }
+#status-badge.copied  { color: var(--accent); border-color: var(--accent); }
+#status-badge.error   { color: var(--red);   border-color: var(--red); }
+#status-badge.hidden  { opacity: 0; }
+
+/* ─── Tooltips ────────────────────────────────────────────────── */
+/* 05-UI-SPEC.md Surface 2's sanctioned, single exception to this phase's
+   toolbar-freeze: the find bar's own button selector is added to all
+   three lists below so #find-prev/#find-next/#find-close's tooltip
+   attribute renders at all (the find bar's own button rule sets no
+   position: relative of its own). Purely additive -- no existing
+   selector or rule changes. */
+.btn[data-tooltip],
+.format-btn[data-tooltip],
+.format-select[data-tooltip],
+.find-btn[data-tooltip] { position: relative; }
+.btn[data-tooltip]::after,
+.format-btn[data-tooltip]::after,
+.format-select[data-tooltip]::after,
+.find-btn[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 20;
+}
+.btn[data-tooltip]:hover::after,
+.format-btn[data-tooltip]:hover::after,
+.format-select[data-tooltip]:hover::after,
+.find-btn[data-tooltip]:hover::after { opacity: 1; }

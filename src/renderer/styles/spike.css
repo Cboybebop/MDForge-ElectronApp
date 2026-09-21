@@ -1,0 +1,45 @@
+/* Phase 9 decision-gate spike harness styling (09-REVIEW.md WR-04 fix).
+   Previously these rules lived as inline `style="..."` attributes directly
+   on spike-spellcheck.html's elements. This app's own production CSP
+   (src/main/security.js PROD_CSP: `style-src 'self'`, no 'unsafe-inline',
+   no nonce support) is applied unconditionally to every `app://` response,
+   including this test-only page -- Chromium silently rejects every one of
+   those inline `style` attributes ("Applying inline style violates ...
+   'style-src 'self''..."), so the box model this file's own comments
+   claimed never actually applied. Moved here, to a real stylesheet asset
+   served like every other page's CSS (`style-src 'self'` covers a linked
+   .css file the same origin serves; only INLINE style is restricted), so
+   the intended box model genuinely applies. Do NOT weaken the CSP to make
+   inline styles work instead -- the CSP is a project non-negotiable
+   (CLAUDE.md Electron Security Posture). */
+
+/* height:100vh so EditorView.coordsAtPos later returns real, non-zero
+   screen coordinates (09-01-PLAN.md Task 3). */
+#spike-mount {
+  height: 100vh;
+}
+
+/* Surface A/B controls (see spike-spellcheck.html's own comments for what
+   each surface is). Matched dimensions across both controls, and (as far as
+   box-sizing/border/padding/margin/font go) across the CM6 mount above too,
+   so the three-surface comparison in
+   tests/e2e/spellcheck-spike.spec.js's control-measurement test is actually
+   comparing like-for-like box models, not just claiming to. */
+#spike-control-textarea,
+#spike-control-contenteditable {
+  display: block;
+  width: 600px;
+  height: 80px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  box-sizing: border-box;
+  font-family: monospace;
+  font-size: 16px;
+}
+
+/* Textarea-only: preserves whitespace/newlines the same way CM6's own
+   default rendering and the contenteditable control do. */
+#spike-control-textarea {
+  white-space: pre-wrap;
+}

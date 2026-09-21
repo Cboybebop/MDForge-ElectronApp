@@ -1,0 +1,104 @@
+# =============================================================================
+# RELEASE WORKFLOW -- authored in Phase 8, never yet triggered.
+# =============================================================================
+# Two-repo split (post-v1.1): this file lives and runs in the PUBLIC release
+# repo, https://github.com/Cboybebop/MDForge-ElectronApp -- not in the private
+# work repo, https://github.com/Cboybebop/MD-Forge-App, where all development,
+# tests, planning, and experimentation actually happen. scripts/release-export.mjs
+# (authored in the work repo) builds the allow-listed, .md-free tree that gets
+# copied into the release repo; this workflow is part of that exported tree and
+# is what actually cuts a release once it lands there.
+#
+# The owner/repo below is shared by two other places in the WORK repo, by
+# design, and all three must always agree:
+#   1. electron-builder.yml's `publish.owner`/`publish.repo`
+#   2. src/main/menu.js's "View Releases on GitHub" menu item
+#   3. This file (identifies where it itself runs, once exported)
+#
+# Step order is load-bearing: package -> verify -> publish. The fail-closed
+# gate reads the PACKAGED app-update.yml, so it can only protect anything if
+# it runs before the artifacts go public. Do not collapse the package and
+# publish steps back into a single `electron-builder --publish always`.
+#
+# To cut a release (run from within the release repo, after exporting):
+#   git tag v1.0.0 && git push origin v1.0.0
+#
+# Criterion 2 of Phase 8 (the hard release gate) needs TWO versions to test
+# an update between -- see docs/V1-VALIDATION-WORKBOOK.md check 5.6 (work
+# repo only; that doc is not part of the export).
+# =============================================================================
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    # NSIS packaging must run on Windows -- electron-builder's NSIS target
+    # is not cross-buildable from Linux/macOS runners for this project's
+    # config (fileAssociations + nsis-specific options).
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (electron-vite)
+        run: npm run build
+
+      - name: Package (electron-builder, NSIS, unsigned) -- do NOT publish yet
+        # Packaging and publishing are deliberately SEPARATE steps. The
+        # fail-closed gate below reads the packaged app-update.yml, so it can
+        # only protect anything if it runs BEFORE the artifacts go public --
+        # `--publish always` here would make the gate a post-mortem on a
+        # release users could already download.
+        run: npx electron-builder --win --publish never
+
+      - name: Verify the packaged update config is fail-open (6th gate)
+        # [08-REVIEW.md WR-02 + 08-VERIFICATION.md] Asserts `publisherName` is
+        # ABSENT from the packaged app-update.yml. Its presence would make
+        # electron-updater attempt a signature verification this unsigned
+        # build cannot satisfy, silently breaking auto-update for every user.
+        # Placed between packaging and publishing so a bad config fails the
+        # release instead of shipping it.
+        run: npm run test:app-update-config
+
+      - name: Compute SHA-256 checksums for published installer(s)
+        # The only integrity signal an unsigned installer offers a
+        # downloader -- see README.md's "Download & Install (Windows)"
+        # section for the matching user-facing verification instructions.
+        shell: pwsh
+        run: |
+          Get-ChildItem -Path dist -Filter *.exe | ForEach-Object {
+            $hash = Get-FileHash -Algorithm SHA256 -Path $_.FullName
+            "$($hash.Hash)  $($_.Name)" | Add-Content -Path dist/checksums.txt
+          }
+
+      - name: Publish the release (installer + update feed + checksums)
+        # electron-updater's GitHub provider needs the installer, latest.yml
+        # and the .blockmap all present on the release. Publishing here --
+        # rather than via electron-builder's own --publish always above --
+        # is what lets the gate stand between packaging and going public.
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: |
+            dist/*.exe
+            dist/latest.yml
+            dist/*.blockmap
+            dist/checksums.txt

@@ -1,0 +1,149 @@
+/* Sidebar tree (Surface 1, WORK-01/WORK-02) plus the sidebar resize handle
+ * and the "no folder open" empty state -- copied verbatim from
+ * 07-UI-SPEC.md's "Surface 1 -- Sidebar Tree" CSS section. Do not re-derive
+ * or "improve" these values; every custom property resolves through
+ * tokens.css (--surface, --border, --accent, --accent-soft-strong, --text,
+ * --text-bright, --text-dim, --red, --mono, --radius, --bg, --row-stripe),
+ * zero new tokens, zero raw hex, zero new font sizes/weights.
+ *
+ * #workspace is the NEW row wrapper inserted between #tab-bar and
+ * #editor-area (see index.html's "Structural placement" comment) -- it is
+ * a sibling wrapper around #editor-area, never a child of it and never a
+ * third column inside #editor-panes.
+ *
+ * Individual .tree-item rows are rendered by a later plan's
+ * workspace/tree.js module; this file owns only the static shell rules.
+ */
+
+#workspace {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+#sidebar {
+  flex-shrink: 0;
+  width: 240px;           /* default; persisted, min 160px, max 480px */
+  min-width: 160px;
+  max-width: 480px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  font-family: var(--mono);
+}
+#sidebar.collapsed { width: 0; min-width: 0; overflow: hidden; }
+#sidebar::-webkit-scrollbar       { width: 6px; }
+#sidebar::-webkit-scrollbar-track { background: transparent; }
+#sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+#sidebar-resize-handle {
+  width: 5px;
+  background: var(--border);
+  cursor: col-resize;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+#sidebar-resize-handle:hover,
+#sidebar-resize-handle.dragging { background: var(--accent); }
+#sidebar.collapsed + #sidebar-resize-handle { display: none; }
+
+.tree-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 8px 0 calc(12px + var(--depth) * 16px);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s, color 0.15s;
+}
+.tree-item:hover               { background: var(--row-stripe); color: var(--text-bright); }
+.tree-item.selected            { background: var(--accent-soft-strong); color: var(--text-bright);
+                                  box-shadow: inset 2px 0 0 0 var(--accent); }
+.tree-item.open .tree-name     { font-weight: 600; }
+.tree-item:focus-visible        { outline: 1px solid var(--accent); outline-offset: -1px; }
+
+.tree-chevron {
+  flex: 0 0 auto;
+  width: 12px; height: 12px;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: transform 0.15s;
+}
+.tree-item.dir.expanded .tree-chevron { transform: rotate(90deg); }
+.tree-chevron svg { width: 12px; height: 12px; }
+
+.tree-icon { flex: 0 0 auto; width: 14px; height: 14px; color: var(--text-dim); }
+.tree-icon svg { width: 14px; height: 14px; }
+
+.tree-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+.tree-loading,
+.tree-dir-empty,
+.tree-dir-error {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px 0 calc(12px + var(--depth) * 16px);
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.tree-dir-error { color: var(--red); }
+
+.tree-rename-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 20px;
+  padding: 0 6px;
+  background: var(--bg);
+  color: var(--text-bright);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: 12px;
+  outline: none;
+}
+.tree-rename-input:focus { border-color: var(--accent); }
+.tree-error-text {
+  display: block;
+  padding: 2px 8px 4px calc(12px + var(--depth) * 16px);
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--red);
+}
+
+/* ─── No-folder-open empty state (mirrors #empty-state's own contract) ── */
+.sidebar-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 32px 16px;
+  text-align: center;
+}
+.sidebar-empty.hidden { display: none; }
+.sidebar-empty svg { width: 32px; height: 32px; color: var(--text-dim); }
+.sidebar-empty p {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tree-item, .tree-chevron, #sidebar-resize-handle { transition: none; }
+}
+
+/* ─── Toolbar toggle: icon reflects state ─────────────────────────
+   aria-pressed is the single source of truth for which icon shows, so the
+   visual state cannot drift from what assistive tech is told. Exactly one
+   of the two glyphs is ever displayed. */
+#btn-toggle-sidebar .icon-sidebar-closed { display: none; }
+#btn-toggle-sidebar[aria-pressed="false"] .icon-sidebar-open { display: none; }
+#btn-toggle-sidebar[aria-pressed="false"] .icon-sidebar-closed { display: inline-block; }

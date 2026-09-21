@@ -1,0 +1,360 @@
+/* Main split layout, pane headers, formatting toolbar, raw-markdown editor,
+ * drag handle — ported from index.html:182-304.
+ *
+ * Plus CSP remediation classes (01-UI-SPEC.md CSP compliance table) that
+ * replace the static `style="..."` attributes the strict style-src 'self'
+ * CSP would otherwise silently drop:
+ *   - `.pane--split-default` replaces `#left-pane`'s `style="width:50%"`
+ *   - `.pane--fill` replaces `#right-pane`'s `style="flex:1"`
+ * Runtime `element.style.width`/`.style.flex` assignment from split.js /
+ * pane-mode.js / resize.js is CSP-exempt and unaffected — those modules
+ * still set `.style.width`/`.style.flex` at runtime after these classes
+ * establish the initial layout.
+ *
+ * `.hidden` is the generic display:none utility, reused for
+ * `#file-input-fallback` (replaces its `style="display:none"`), matching
+ * the existing `.btn.hidden` / `#status-badge.hidden` pattern.
+ */
+
+.pane--split-default { width: 50%; }
+.pane--fill { flex: 1; }
+.hidden { display: none; }
+
+/* ─── Main split layout ───────────────────────────────────────── */
+/* [06-07] #editor-area is now a COLUMN flex container so the recovery
+   banner (its first child, full width) and #editor-panes (the actual
+   left/drag-handle/right row, everything that used to be #editor-area's
+   direct flex-row children) stack vertically instead of the banner being
+   laid out as a third column beside the panes. */
+#editor-area {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+#editor-panes {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Each pane wrapper */
+.pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.pane + .pane { border-left: 1px solid var(--border); }
+
+/* Pane header labels */
+.pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.pane-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.pane-actions { display: flex; gap: 6px; }
+
+.wysiwyg-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.format-select,
+.format-btn {
+  min-height: 30px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.format-select {
+  width: 108px;
+  padding: 0 8px;
+  cursor: pointer;
+}
+
+.format-btn {
+  width: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.format-btn:hover,
+.format-select:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.format-btn.active {
+  background: var(--accent-soft-strong);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.format-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+  margin: 0 2px;
+}
+
+/* ─── Left pane: raw markdown editor host ───────────────────────
+   [12-14] Single #md-input selector only. Pre-CM6, every tab past the
+   bootstrap document was a separate textarea created by documents.js's
+   createDocument() with className 'doc-surface', so both selectors had to
+   be listed together (see git history / find-bar.js, status.js comments
+   for that shape). Since 12-02-PLAN.md there is one shared CM6 EditorView
+   mounted inside the single #md-input host div for every tab -- no
+   per-tab element ever carries a 'doc-surface' class any more, so the
+   second selector is genuinely dead and has been removed. */
+#md-input {
+  flex: 1;
+  width: 100%;
+  padding: 20px 22px;
+  background: var(--bg);
+  color: var(--text-bright);
+  font-family: var(--mono);
+  font-size: 13.5px;
+  line-height: 1.75;
+  border: none;
+  outline: none;
+  resize: none;
+  overflow-y: auto;
+  tab-size: 2;
+}
+/* [12-02] CM6's own `.cm-editor` root does not auto-fill a flex-sized
+   ancestor without an explicit height rule -- #md-input is now a bare div
+   host (see index.html), and `.cm-editor` is the actual element CM6 mounts
+   inside it. This is layout plumbing only (no colour, no theme) --
+   Phase 17 owns syntax highlighting/theming. */
+#md-input .cm-editor {
+  height: 100%;
+}
+
+/* Custom scrollbar */
+#md-input::-webkit-scrollbar { width: 6px; }
+#md-input::-webkit-scrollbar-track { background: transparent; }
+#md-input::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ─── Resize handle ───────────────────────────────────────────── */
+#drag-handle {
+  width: 5px;
+  background: var(--border);
+  cursor: col-resize;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  position: relative;
+  z-index: 10;
+}
+#drag-handle:hover, #drag-handle.dragging { background: var(--accent); }
+
+/* ─── Current-match selection visibility (05-UI-SPEC.md D1-Agnostic
+   Clause) ─────────────────────────────────────────────────────────
+   D1 (05-01) resolved on <textarea>-per-tab, so the find bar's ONLY
+   match-indication mechanism was the surface's own native selection
+   (setSelectionRange) -- this rule is what makes that selection visible
+   against the dark palette (it is otherwise the UA default). [12-14] The
+   second selector this rule used to carry, for the retired doc-surface
+   class, is now dead: since 12-02-PLAN.md there is a single shared CM6
+   EditorView inside #md-input for every tab, so #md-input alone covers
+   every open document. */
+#md-input::selection { background: var(--accent-soft-strong); color: var(--text-bright); }
+
+/* ─── Recovery banner (PERS-02, 06-CONTEXT.md) ───────────────────── */
+/* Full-width dismissible notice, first child of the now-column
+   #editor-area (above #editor-panes). Palette entirely from tokens.css --
+   --accent-soft/--accent-soft-border/--text -- no new custom properties,
+   no raw hex, per docs/ARCHITECTURE.md's UI-SPEC discipline. */
+#recovery-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--accent-soft-border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+/* `#empty-state.hidden`'s own override-an-ID-selector precedent
+   (preview.css): `.hidden`'s bare class rule (specificity 0,1,0) alone
+   cannot beat this file's own bare `#recovery-banner` rule above
+   (specificity 1,0,0), so the compound ID+class selector is required. */
+#recovery-banner.hidden { display: none; }
+
+#recovery-banner-dismiss {
+  flex-shrink: 0;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--accent-soft-border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+#recovery-banner-dismiss:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ─── External-change banner (Surface 3, WORK-05, 07-UI-SPEC.md) ────── */
+/* Second, independent full-width row inside #editor-area, directly below
+   #recovery-banner in source order. Reuses #recovery-banner's exact visual
+   shape (same --accent-soft/--accent-soft-border palette, same padding,
+   same font) as presentation-shape reuse only -- #external-change-banner is
+   a distinct element with its own controller module, not a call into
+   recovery-banner.js. Either, both, or neither banner may be visible at
+   once; both are ordinary flex-flow rows, never overlapping overlays. */
+#external-change-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--accent-soft-border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+#external-change-banner.hidden { display: none; }
+
+.banner-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+.banner-btn {
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--accent-soft-border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.banner-btn:hover { border-color: var(--accent); color: var(--accent); }
+.banner-btn--primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.banner-btn--primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.banner-btn:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+
+/* ─── Find & replace bar (Surface 2, 05-UI-SPEC.md) ──────────────── */
+#find-bar {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 14px;              /* identical to .pane-header -- bottom rail mirrors top rail */
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+#find-bar.find-only .find-row--replace { display: none; }
+
+.find-row { display: flex; align-items: center; gap: 8px; }
+
+.find-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 28px;                   /* matches .pane-mode-controls select/range */
+  padding: 0 8px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: 11px;
+  outline: none;
+}
+.find-input:focus { border-color: var(--accent); }
+.find-input::placeholder { color: var(--text-dim); }
+
+#find-count {
+  flex: 0 0 auto;
+  min-width: 88px;
+  text-align: right;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+#find-count.no-matches { color: var(--red); }
+
+.find-btn {
+  flex: 0 0 auto;
+  width: 28px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.find-btn:hover    { border-color: var(--accent); color: var(--accent); }
+.find-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.find-btn:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+.find-btn svg { width: 12px; height: 12px; }
+
+/* Scoped height/size override so the inherited .btn sits on the 28px control line */
+#find-bar .btn { height: 28px; padding: 0 8px; font-size: 11px; }
+
+@media (prefers-reduced-motion: reduce) { .find-btn { transition: none; } }
+
+/* [14-02] @codemirror/search's own searchHighlighter ViewPlugin paints EVERY
+   match in the viewport with .cm-searchMatch/.cm-searchMatch-selected
+   (node_modules/@codemirror/search/dist/index.js's baseTheme, ~lines
+   1202-1231) whenever the panel is open and the query is valid -- unlike the
+   old hand-rolled engine, which only ever highlighted the current match via
+   the native ::selection rule below. Neutralized here (mirrors this file's
+   own #md-input::selection scoping convention) to keep the existing
+   single-active-match-only visual contract unchanged. */
+#md-input .cm-searchMatch,
+#md-input .cm-searchMatch-selected {
+  background: transparent;
+}
+
+/* [14-02] 14-01's createFindSearchExtension() pairs search({createPanel})
+   with an explicit panels({bottomContainer: #left-pane}) so CM6 mounts
+   #find-bar inside #left-pane rather than reparenting it into .cm-editor.
+   The wrapper div CM6 itself creates for that mount point (classed
+   `cm-panels cm-panels-bottom`, per @codemirror/view's PanelGroup.syncDOM())
+   is a plain flex item with no flex-shrink of its own -- unlike #find-bar's
+   own flex-shrink: 0 above -- so without this rule the find bar could be
+   squeezed under tight vertical space in a way it never was before. */
+#left-pane > .cm-panels-bottom {
+  flex-shrink: 0;
+}

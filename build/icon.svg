@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!--
+    MD Forge application icon master (build/icon.svg).
+
+    Single source of truth for every generated icon asset (10-CONTEXT.md
+    Area 1's "one SVG master, everything else generated from it" decision).
+    scripts/generate-icons.mjs rasterizes this file via a hidden Electron
+    BrowserWindow to produce build/icon.ico (app icon) and build/mdDocument.ico
+    (document icon, page silhouette re-derived from this same file, mark inset)
+    -- never hand-edit those .ico files directly; regenerate with
+    `npm run icons:generate`.
+
+    Deliberately self-contained: no xlink:href/<image> to an external URL, no
+    @import, no http(s):// anywhere -- this file is the input to a build-time
+    rasterizer, and any external reference would become a real network
+    dependency the moment the generator loads it (offline-build discipline,
+    10-01-PLAN.md Task 1).
+
+    CRITICAL: no full-bleed background <rect> covers the 256x256 canvas. The
+    page silhouette below is the ONLY opaque shape in this file. That leaves
+    the four canvas corners genuinely uncovered, so the rasterized PNG has
+    real alpha=0 there -- scripts/generate-icons.mjs spot-checks exactly this
+    margin against the raw captured bitmap (not a re-decoded PNG) and throws
+    if it finds a fully opaque pixel. Do not add a background shape here.
+  -->
+
+  <!--
+    Document/page silhouette: a rounded-rectangle body with a folded
+    top-right corner -- the universal "file" icon shape. Filled solid
+    #0f1117, this app's dark background token (src/main/window.js's
+    BG_DARK constant). Flat fill only, no gradient, no filter.
+  -->
+  <path fill="#0f1117"
+        d="M 52,24 L 176,24 L 216,64 L 216,220
+           A 12,12 0 0 1 204,232
+           L 52,232
+           A 12,12 0 0 1 40,220
+           L 40,36
+           A 12,12 0 0 1 52,24 Z" />
+
+  <!--
+    Bold geometric "M" (the near-universal Markdown signifier), amber
+    #e8a44a on the dark page. Stroke width 20 SVG units is comfortably
+    above the ~12-unit legibility floor, so the mark stays readable when
+    rasterized all the way down to 16x16 -- the size that actually matters
+    most in the Windows taskbar.
+  -->
+  <path fill="none" stroke="#e8a44a" stroke-width="20"
+        stroke-linecap="round" stroke-linejoin="round"
+        d="M 78,172 L 78,96 L 128,142 L 178,96 L 178,172" />
+
+  <!--
+    Descending arrow to the right of the M -- the second half of the
+    near-universal Markdown-badge motif (an "M" plus a down-pointing
+    chevron/arrow). Flat solid fills, positioned well clear of both the
+    folded top-right corner cut and the canvas right edge.
+  -->
+  <rect x="188" y="92" width="16" height="32" fill="#e8a44a" />
+  <path fill="#e8a44a" d="M 176,124 L 212,124 L 194,156 Z" />
+</svg>
