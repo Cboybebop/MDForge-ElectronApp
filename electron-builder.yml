@@ -74,6 +74,29 @@ nsis:
   # silently ignored (10-RESEARCH.md Pitfall 1).
   installerIcon: build/icon.ico
   uninstallerIcon: build/icon.ico
+  # DIST-02, found by publishing v1.1.0 and testing the real download URL.
+  #
+  # electron-builder's DEFAULT artifactName is `${productName} Setup
+  # ${version}.${ext}`, and productName is "MD Forge" -- so the installer was
+  # built as "MD Forge Setup 1.1.0.exe", WITH SPACES. Two different things then
+  # happen to that name, and they disagree:
+  #
+  #   - GitHub replaces spaces with DOTS when it stores a release asset, giving
+  #     "MD.Forge.Setup.1.1.0.exe".
+  #   - electron-builder writes the HYPHENATED form into latest.yml, giving
+  #     "MD-Forge-Setup-1.1.0.exe".
+  #
+  # electron-updater reads latest.yml and downloads the name it finds there, so
+  # it requested the hyphenated URL and got a hard 404 -- verified directly
+  # against the real published v1.1.0 release: hyphens 404, dots 200. The
+  # release looks completely correct from the outside; only the update DOWNLOAD
+  # is broken, which is exactly the failure a release page cannot show you.
+  #
+  # A name with no spaces in it cannot be rewritten by either party, so both
+  # sides agree by construction. Do not reintroduce spaces here, and do not
+  # "fix" this by renaming productName -- that is the user-visible app name and
+  # it is correct as it is.
+  artifactName: MD-Forge-Setup-${version}.${ext}
 fileAssociations:
   - ext: md
     # STABLE STRING -- do not rename post-release. In electron-builder@26.15.3 this literal
