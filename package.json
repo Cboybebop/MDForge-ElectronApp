@@ -2,7 +2,7 @@
   "name": "md-forge-desktop",
   "productName": "MD Forge",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Dual-pane Markdown editor desktop app",
   "main": "out/main/index.js",
   "scripts": {
