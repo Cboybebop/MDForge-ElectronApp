@@ -481,12 +481,16 @@ if (tabBarEl) {
 
     if (ids.length < lastTabCount) {
       hideFindBar();
-    } else if (activeDocId !== lastActiveDocId && !findBar.classList.contains('hidden')) {
+    } else if (activeDocId !== lastActiveDocId) {
+      // Reconcile in BOTH directions: closing the bar only closes the panel
+      // on the state active at the time, so a tab that had it open earlier
+      // would otherwise remount #find-bar when switched back to.
+      const isOpen = !findBar.classList.contains('hidden');
       const editor = getActiveEditor();
       if (editor) {
-        reconcilePanelForActiveState(editor, { isOpen: true, query: currentQuery() });
+        reconcilePanelForActiveState(editor, { isOpen, query: currentQuery() });
       }
-      runSearch({ preserveIndex: true });
+      if (isOpen) runSearch({ preserveIndex: true });
     }
 
     lastTabCount = ids.length;

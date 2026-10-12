@@ -283,6 +283,10 @@
   font-size: 11px;
   color: var(--text-dim);
 }
+/* Same override-an-ID-selector precedent as #recovery-banner.hidden above:
+   without it the bare `#find-bar { display: flex }` rule beats `.hidden`,
+   so hideFindBar() (Close button / Escape) had no visible effect. */
+#find-bar.hidden { display: none; }
 #find-bar.find-only .find-row--replace { display: none; }
 
 .find-row { display: flex; align-items: center; gap: 8px; }

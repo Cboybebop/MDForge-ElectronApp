@@ -97,6 +97,11 @@ nsis:
   # "fix" this by renaming productName -- that is the user-visible app name and
   # it is correct as it is.
   artifactName: MD-Forge-Setup-${version}.${ext}
+  # Icon/association cache refresh. build/installer.nsh defines customInstall and
+  # customUnInstall macros that call SHChangeNotify(SHCNE_ASSOCCHANGED), so Windows
+  # re-reads the shell icon cache after an install/uninstall instead of showing the
+  # previous icon. tests/packaging-config.test.js guards this include and the call.
+  include: build/installer.nsh
 fileAssociations:
   - ext: md
     # STABLE STRING -- do not rename post-release. In electron-builder@26.15.3 this literal
