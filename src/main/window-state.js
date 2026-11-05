@@ -16,9 +16,41 @@ const store = new Store({
     // 07-07 (WORK-01/02 UI): sidebar width/collapsed persistence reuses
     // THIS store instance rather than a third one, per 07-PATTERNS.md.
     sidebarWidth: 240,
-    sidebarCollapsed: false
+    sidebarCollapsed: false,
+    // Pane layout persistence: view mode, left/right split and scroll-sync
+    // toggle. Defaults match index.html's own initial DOM state.
+    paneMode: 'both',
+    splitPercent: 50,
+    syncScroll: true
   }
 })
+
+const PANE_MODES = ['both', 'left', 'right']
+
+// Pure validator for pane-layout state crossing the IPC boundary (T-jja-01)
+// or read back from a hand-edited store file (T-jja-02): enum for paneMode,
+// 20-80 clamp for splitPercent (matching split.js), boolean for syncScroll.
+// Bad fields are ignored and fall back to `current`, never thrown on.
+function sanitizePaneState (partial, current) {
+  const next = { ...current }
+  if (!partial || typeof partial !== 'object') return next
+  if (PANE_MODES.includes(partial.paneMode)) next.paneMode = partial.paneMode
+  if (typeof partial.splitPercent === 'number' && Number.isFinite(partial.splitPercent)) {
+    next.splitPercent = Math.min(80, Math.max(20, partial.splitPercent))
+  }
+  if (typeof partial.syncScroll === 'boolean') next.syncScroll = partial.syncScroll
+  return next
+}
+
+const PANE_DEFAULTS = { paneMode: 'both', splitPercent: 50, syncScroll: true }
+
+function readPaneState () {
+  return sanitizePaneState({
+    paneMode: store.get('paneMode'),
+    splitPercent: store.get('splitPercent'),
+    syncScroll: store.get('syncScroll')
+  }, PANE_DEFAULTS)
+}
 
 function getStoredBounds () {
   return {
@@ -180,6 +212,16 @@ function registerWindowStatePersistence (win, initialMaximized) {
   ipcMain.on('sidebar:set-state', (_event, state) => {
     store.set({ sidebarWidth: state.width, sidebarCollapsed: state.collapsed })
   })
+
+  // Pane mode / split / sync-scroll persistence. Same sendSync-at-load
+  // discipline as sidebar:get-state; set-state takes a partial and is
+  // validated in main by sanitizePaneState.
+  ipcMain.on('pane:get-state', (event) => {
+    event.returnValue = readPaneState()
+  })
+  ipcMain.on('pane:set-state', (_event, partial) => {
+    store.set(sanitizePaneState(partial, readPaneState()))
+  })
 }
 
 export {
@@ -188,5 +230,6 @@ export {
   validatedBoundsForRestore,
   registerWindowStatePersistence,
   persistBounds,
+  sanitizePaneState,
   store
 }

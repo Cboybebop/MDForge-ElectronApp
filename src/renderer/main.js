@@ -48,15 +48,17 @@ import './theme/theme.js';
 import './files/drag-drop.js';
 import './quit-handshake.js';
 
-import { setLeftPaneWidth } from './panes/split.js';
+import { setLeftPaneWidth, getLeftWidthPercent } from './panes/split.js';
 import { applyPaneMode } from './panes/pane-mode.js';
 import { isAnyDocumentDirty } from './documents.js';
 import { isQuitProceeding } from './quit-handshake.js';
 import { openFileAtPath } from './files/open.js';
 
 // Ports index.html:1295-1296 exactly.
-setLeftPaneWidth(50);
-applyPaneMode('both');
+// Restores the persisted layout (pane-mode.js/split.js seeded the select and
+// width from the stored state at module load); falls back to 50/both.
+setLeftPaneWidth(getLeftWidthPercent());
+applyPaneMode(document.getElementById('pane-mode-select').value);
 
 // Ports index.html:1280-1285 exactly (the `pageshow` listener at
 // index.html:1287-1289 is deliberately NOT ported — see file header).

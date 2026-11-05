@@ -179,6 +179,12 @@ contextBridge.exposeInMainWorld('mdforge', {
   getSidebarState: () => ipcRenderer.sendSync('sidebar:get-state'),
   setSidebarState: (state) => ipcRenderer.send('sidebar:set-state', state),
 
+  // Pane mode / split / sync-scroll persistence. getPaneState is sendSync for
+  // the same pre-paint reason as getSidebarState; setPaneState takes a partial
+  // ({paneMode}, {splitPercent} or {syncScroll}) validated in main.
+  getPaneState: () => ipcRenderer.sendSync('pane:get-state'),
+  setPaneState: (partial) => ipcRenderer.send('pane:set-state', partial),
+
   // WORK-03 (07-08): the tree's native context menu + shared
   // confirm-and-delete bridge. showTreeContextMenu is a fire-and-forget
   // send, not invoke -- the native menu's own click handlers produce their

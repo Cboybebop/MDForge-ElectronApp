@@ -394,9 +394,20 @@ export function getDocumentIds() {
 // callers already treat a falsy return as "no match").
 export function getDocumentIdByPath(filePath) {
   for (const [docId, doc] of documents) {
-    if (doc.filePath === filePath) return docId;
+    if (samePath(doc.filePath, filePath)) return docId;
   }
   return null;
+}
+
+// Windows-first path equality for tab dedup: lowercases and collapses every
+// run of `/` or `\` into one `\`, mirroring main's normalizeForDedup()
+// (src/main/restore-plan.js) exactly -- the renderer cannot import main code,
+// so the two copies must stay in step. Null-safe: an untitled document's
+// null filePath never matches anything, including another null.
+export function samePath(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const norm = (p) => p.toLowerCase().replace(/[/\\]+/g, '\\');
+  return norm(a) === norm(b);
 }
 
 // [12-02] Returns the single shared EditorView directly -- no per-doc

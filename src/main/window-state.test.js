@@ -44,6 +44,7 @@ const {
   validatedBoundsForRestore,
   registerWindowStatePersistence,
   persistBounds,
+  sanitizePaneState,
   store
 } = await import('./window-state.js')
 
@@ -293,5 +294,35 @@ describe('registerWindowStatePersistence', () => {
     win.emit('resize')
 
     expect(getStoredBounds().maximized).toBe(false)
+  })
+})
+
+describe('sanitizePaneState', () => {
+  const current = { paneMode: 'both', splitPercent: 50, syncScroll: true }
+
+  it('accepts valid fields and merges them over current', () => {
+    expect(sanitizePaneState({ paneMode: 'right', splitPercent: 35, syncScroll: false }, current))
+      .toEqual({ paneMode: 'right', splitPercent: 35, syncScroll: false })
+  })
+
+  it('rejects an unknown paneMode', () => {
+    expect(sanitizePaneState({ paneMode: 'bogus' }, current).paneMode).toBe('both')
+  })
+
+  it('clamps splitPercent to 20-80 and rejects non-numbers', () => {
+    expect(sanitizePaneState({ splitPercent: 5 }, current).splitPercent).toBe(20)
+    expect(sanitizePaneState({ splitPercent: 999 }, current).splitPercent).toBe(80)
+    expect(sanitizePaneState({ splitPercent: '60' }, current).splitPercent).toBe(50)
+    expect(sanitizePaneState({ splitPercent: NaN }, current).splitPercent).toBe(50)
+  })
+
+  it('rejects a non-boolean syncScroll', () => {
+    expect(sanitizePaneState({ syncScroll: 'no' }, current).syncScroll).toBe(true)
+  })
+
+  it('tolerates a non-object partial and does not mutate current', () => {
+    expect(sanitizePaneState(null, current)).toEqual(current)
+    sanitizePaneState({ paneMode: 'left' }, current)
+    expect(current.paneMode).toBe('both')
   })
 })

@@ -23,6 +23,7 @@ import {
   getDocumentContent,
   setActiveDocId,
   setDocumentMissing,
+  samePath,
 } from '../documents.js';
 import { renderTabBar } from '../tabs/tab-bar.js';
 
@@ -31,11 +32,11 @@ const btnSave = document.getElementById('btn-save');
 
 // Iterates documents.js's Map looking for an already-open document whose
 // filePath matches the just-opened path. `path` here always comes from a
-// successful open result (never null), so a strict `===` comparison can
-// never false-positive against an untitled document's `null` filePath.
+// successful open result (never null); samePath() is case/slash-insensitive
+// (Windows) and never matches an untitled document's `null` filePath.
 function findOpenDocumentByPath(path) {
   for (const docId of getDocumentIds()) {
-    if (getDocument(docId).filePath === path) return docId;
+    if (samePath(getDocument(docId).filePath, path)) return docId;
   }
   return null;
 }

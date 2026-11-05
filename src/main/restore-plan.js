@@ -76,24 +76,50 @@ function dedupKeyFor (entry) {
  * @returns {Array<object>} the ordered, deduplicated restore plan.
  */
 export function composeRestorePlan (recoveryEntries, argvEntries, sessionEntries) {
-  const seen = new Set()
-  const plan = []
+  const seen = new Map() // dedup key -> surviving record
+  const records = []
+  let lastArgvRecord = null
 
-  const addAll = (entries) => {
+  // Each record tracks whether ANY colliding candidate was active, so a
+  // first-wins dedup never loses the session's active flag when the
+  // surviving duplicate (e.g. a recovery entry) was not itself flagged.
+  const addAll = (entries, isArgv) => {
     if (!Array.isArray(entries)) return
     for (const entry of entries) {
       const key = dedupKeyFor(entry)
-      if (key !== null) {
-        if (seen.has(key)) continue
-        seen.add(key)
+      let record
+      if (key !== null && seen.has(key)) {
+        record = seen.get(key)
+        record.active = record.active || Boolean(entry && entry.active)
+      } else {
+        record = { entry, active: Boolean(entry && entry.active) }
+        if (key !== null) seen.set(key, record)
+        records.push(record)
       }
-      plan.push(entry)
+      if (isArgv) lastArgvRecord = record
     }
   }
 
-  addAll(recoveryEntries)
-  addAll(argvEntries)
-  addAll(sessionEntries)
+  addAll(recoveryEntries, false)
+  addAll(argvEntries, true)
+  addAll(sessionEntries, false)
 
-  return plan
+  // Focus rules: an explicit argv/file-association launch always wins -- the
+  // LAST argv entry's surviving record is the only active one. Otherwise the
+  // session's active tab is preserved, and if several candidates ended up
+  // active only the first is kept. Entries are copied, never mutated, and
+  // only copied when the flag actually changes.
+  let activeRecord = null
+  if (lastArgvRecord !== null) {
+    activeRecord = lastArgvRecord
+  } else {
+    activeRecord = records.find((record) => record.active) || null
+  }
+
+  return records.map((record) => {
+    const wanted = record === activeRecord
+    return Boolean(record.entry && record.entry.active) === wanted
+      ? record.entry
+      : { ...record.entry, active: wanted }
+  })
 }

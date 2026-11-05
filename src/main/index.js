@@ -52,7 +52,7 @@ let win
 // already documented that "the taskbar hover name comes from two places and
 // both must agree: productName in electron-builder.yml covers the packaged
 // executable; app.setName() plus the existing
-// app.setAppUserModelId('com.markey.mdforge') covers the dev run" -- but
+// AppUserModelId call (the '.dev' ID, see app.whenReady() below) covers the dev run" -- but
 // 10-02-PLAN.md Task 1 only ever wired package.json's productName field,
 // never the app.setName() call itself. That gap was invisible until this
 // plan's own e2e proof: package.json's productName IS read by Electron for
@@ -178,7 +178,25 @@ app.whenReady().then(async () => {
   // Pitfall 5). Phase 8's production config MUST use this exact string,
   // distinct from the current throwaway spike config's
   // 'com.markey.mdforge.spike'.
-  app.setAppUserModelId('com.markey.mdforge')
+  //
+  // Unpackaged runs (npm run dev, the Playwright e2e suite) execute
+  // node_modules\electron\dist\electron.exe. If that process claimed the
+  // installed app's AUMID, Windows would register a Start Menu `Electron.lnk`
+  // (target: the repo's electron.exe) under that identity, and that shortcut
+  // would then hijack Start, search and Jump List launches of the INSTALLED
+  // MD Forge. A distinct '.dev' suffix isolates the two identities. The dev
+  // ID has no matching installer appId, so Jump List and recent documents are
+  // not expected to carry over to dev runs.
+  //
+  // Deliberately an if/else with plain string literals (not a ternary or a
+  // constant): tests/packaging-config.test.js regex-matches the FIRST
+  // literal here against electron-builder.yml's appId, so the packaged
+  // literal must stay first.
+  if (app.isPackaged) {
+    app.setAppUserModelId('com.markey.mdforge')
+  } else {
+    app.setAppUserModelId('com.markey.mdforge.dev')
+  }
 
   // EDIT-03 (18-03, spellcheck-default-language-not-forced): Electron/Chromium's
   // spellchecker is enabled by default, but its SESSION LANGUAGE, left

@@ -8,7 +8,32 @@
 // module works correctly when imported before the real DOM exists (tests
 // construct #left-pane/#right-pane/#split-width fresh in each beforeEach).
 
-let leftWidthPercent = 50;
+// Persisted pane-layout state (pane mode / split / sync-scroll). The main
+// process validates and owns the store (window-state.js); this just bridges
+// to it. Falls back silently when window.mdforge is absent (unit tests, or a
+// preload that predates these methods) so pane code never depends on it.
+export function getStoredPaneState() {
+  try {
+    const state = window.mdforge && window.mdforge.getPaneState && window.mdforge.getPaneState();
+    return state && typeof state === 'object' ? state : null;
+  } catch {
+    return null;
+  }
+}
+
+export function persistPaneState(partial) {
+  try {
+    if (window.mdforge && window.mdforge.setPaneState) window.mdforge.setPaneState(partial);
+  } catch {
+    // Persistence is best-effort; never break the pane UI over it.
+  }
+}
+
+const storedPaneState = getStoredPaneState();
+
+let leftWidthPercent = storedPaneState && typeof storedPaneState.splitPercent === 'number'
+  ? Math.min(80, Math.max(20, storedPaneState.splitPercent))
+  : 50;
 
 export function getLeftWidthPercent() {
   return leftWidthPercent;

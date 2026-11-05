@@ -5,7 +5,7 @@
 // Imports the single-owner setLeftPaneWidth from split.js (PATTERNS.md Shared
 // Pattern 5) rather than re-deriving the clamped percentage locally.
 
-import { setLeftPaneWidth } from './split.js';
+import { setLeftPaneWidth, getLeftWidthPercent, persistPaneState } from './split.js';
 import { applyPaneMode } from './pane-mode.js';
 
 const dragHandle = document.getElementById('drag-handle');
@@ -40,10 +40,13 @@ document.addEventListener('mouseup', () => {
   dragHandle.classList.remove('dragging');
   document.body.style.cursor = '';
   document.body.style.userSelect = '';
+  // Persist once per drag, on release, not on every mousemove.
+  persistPaneState({ splitPercent: getLeftWidthPercent() });
 });
 
 // Ports index.html:1271-1274 exactly.
 splitWidth.addEventListener('input', () => {
   setLeftPaneWidth(Number(splitWidth.value));
   applyPaneMode(paneModeSelect.value);
+  persistPaneState({ splitPercent: getLeftWidthPercent() });
 });

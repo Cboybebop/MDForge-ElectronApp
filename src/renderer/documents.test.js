@@ -544,6 +544,22 @@ describe('setDocumentMissing / getDocumentIdByPath', () => {
 
     documents.closeDocument(docId); // cleanup
   });
+
+  it('samePath treats case and slash variants as the same path, and never matches null', () => {
+    const bs = String.fromCharCode(92);
+    expect(documents.samePath(['C:', 'Docs', 'README.md'].join(bs), 'c:/docs/readme.md')).toBe(true);
+    expect(documents.samePath('c:/docs//readme.md', 'C:/DOCS/readme.md')).toBe(true);
+    expect(documents.samePath('c:/docs/a.md', 'c:/docs/b.md')).toBe(false);
+    expect(documents.samePath(null, null)).toBe(false);
+    expect(documents.samePath(null, 'c:/a.md')).toBe(false);
+    expect(documents.samePath(undefined, undefined)).toBe(false);
+  });
+
+  it('getDocumentIdByPath resolves a differently cased/slashed path to the same document', () => {
+    const docId = documents.createDocument({ filePath: 'C:/Docs/README.md', initialContent: 'z' });
+    expect(documents.getDocumentIdByPath('c:/docs/readme.md')).toBe(docId);
+    documents.closeDocument(docId); // cleanup
+  });
 });
 
 // This test deliberately runs LAST in this file: it closes docId 1 (the

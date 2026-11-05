@@ -4,7 +4,7 @@
 // Imports the single-owner `setLeftPaneWidth`/`getLeftWidthPercent` from
 // split.js (PATTERNS.md Shared Pattern 5) — no local `leftWidthPercent`.
 
-import { setLeftPaneWidth, getLeftWidthPercent } from './split.js';
+import { setLeftPaneWidth, getLeftWidthPercent, getStoredPaneState, persistPaneState } from './split.js';
 
 // [18-01, re-evaluated 2026-09-16 -- KEPT, with evidence] A hidden pane is
 // collapsed to zero width, NEVER display:none.
@@ -109,4 +109,15 @@ export function applyPaneMode(mode) {
 const paneModeSelect = document.getElementById('pane-mode-select');
 paneModeSelect.addEventListener('change', () => {
   applyPaneMode(paneModeSelect.value);
+  persistPaneState({ paneMode: paneModeSelect.value });
 });
+
+// Apply the persisted pane mode on load. split.js has already seeded
+// leftWidthPercent from the same stored state, so 'both' applies the stored
+// split width (applyPaneMode reads it back via getLeftWidthPercent).
+const storedPaneState = getStoredPaneState();
+if (storedPaneState && ['both', 'left', 'right'].includes(storedPaneState.paneMode)) {
+  paneModeSelect.value = storedPaneState.paneMode;
+  setLeftPaneWidth(getLeftWidthPercent());
+  applyPaneMode(storedPaneState.paneMode);
+}

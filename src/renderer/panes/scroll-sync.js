@@ -44,6 +44,7 @@
 // cache" discipline.
 
 import { getActiveEditor, getActiveDocId } from '../documents.js';
+import { getStoredPaneState, persistPaneState } from './split.js';
 import { getActiveOrigin } from '../markdown/sync-controller.js';
 // [13-02] wasRecentAppWrite widens this file's own suppression window past
 // the synchronous beginWrite/endWrite bracket -- see cm-dispatch.js's own
@@ -120,3 +121,17 @@ preview.addEventListener('scroll', () => {
   const activeEditor = getActiveEditor();
   if (activeEditor) syncPaneScroll(preview, activeEditor);
 });
+
+// Persisted sync-scroll toggle: restore the stored state at load, and save
+// every change. The checkbox's own `checked` attribute is the fallback
+// default when nothing is stored.
+const syncScrollToggle = document.getElementById('toggle-sync-scroll');
+if (syncScrollToggle) {
+  const storedPaneState = getStoredPaneState();
+  if (storedPaneState && typeof storedPaneState.syncScroll === 'boolean') {
+    syncScrollToggle.checked = storedPaneState.syncScroll;
+  }
+  syncScrollToggle.addEventListener('change', () => {
+    persistPaneState({ syncScroll: syncScrollToggle.checked });
+  });
+}
